@@ -1,0 +1,29 @@
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.csv
+*.aedat4
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Virtual environments
+venv/
+env/
+ENV/

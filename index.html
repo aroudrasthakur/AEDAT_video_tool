@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEDAT Stream Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: 300;
+            letter-spacing: -0.5px;
+            margin-bottom: 40px;
+            text-align: center;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        #upload-section {
+            max-width: 800px;
+            margin: 0 auto 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        #upload-section h2 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            color: #b4b4b4;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .upload-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        #file-input {
+            flex: 1;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        #file-input:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(96, 165, 250, 0.5);
+        }
+
+        /* Match styling for generate-mode select and focus-ms number input */
+        .upload-controls select,
+        .upload-controls input[type="number"] {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-controls select:hover,
+        .upload-controls input[type="number"]:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(96, 165, 250, 0.5);
+        }
+
+        .upload-controls select {
+            -webkit-appearance: none;
+            appearance: none;
+            padding-right: 28px;
+        }
+
+        #focus-ms {
+            width: 90px;
+        }
+
+        /* Hide native number input spinners for consistent UI */
+        /* Chrome, Safari, Edge, Opera */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        /* Firefox */
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* Choose file pseudo-button to match upload button */
+        .choose-file-btn {
+            padding: 10px 18px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .choose-file-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.4); }
+
+        /* Make select visually similar to upload button (gradient background) */
+        .upload-controls select {
+            background: linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(139,92,246,0.95) 100%);
+            color: white;
+            border: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'><path fill='%23ffffff' d='M7 10l5 5 5-5z'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 36px;
+        }
+
+        /* Small +/- buttons next to focus-ms */
+        .focus-step-btn {
+            padding: 8px 10px;
+            background: rgba(255,255,255,0.06);
+            color: #e0e0e0;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        #upload-btn {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        #upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        #upload-btn:active {
+            transform: translateY(0);
+        }
+        
+        #status {
+            margin-top: 16px;
+            font-size: 14px;
+            padding: 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid #3b82f6;
+        }
+        
+        #metadata {
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 12px;
+            line-height: 1.8;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        #viewer-section {
+            display: none;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        #streams-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        
+        @media (max-width: 1200px) {
+            #streams-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .stream-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+        
+        .stream-panel:hover {
+            transform: translateY(-2px);
+        }
+        
+        .stream-panel h2 {
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #b4b4b4;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        #events-canvas {
+            width: 100%;
+            height: auto;
+            background-color: #000000;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        }
+        
+        #rgb-frame {
+            width: 100%;
+            height: auto;
+            background-color: #000000;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        }
+        
+        #controls-section {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        #timeline-container {
+            margin-bottom: 20px;
+        }
+        
+        #timeline {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        #timeline::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s;
+        }
+        
+        #timeline::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+        }
+        
+        #timeline::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+        
+        #time-display {
+            text-align: center;
+            margin-top: 12px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 14px;
+            color: #b4b4b4;
+        }
+        
+        #playback-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #e0e0e0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(96, 165, 250, 0.5);
+            transform: translateY(-1px);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .control-btn:disabled {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.05);
+            color: #4a4a4a;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        #speed-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        #speed-control label {
+            font-size: 13px;
+            color: #b4b4b4;
+            font-weight: 500;
+        }
+        
+        #speed-slider {
+            width: 120px;
+            height: 4px;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        #speed-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        #speed-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        
+        #speed-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #3b82f6;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        #speed-display {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 13px;
+            color: #e0e0e0;
+            min-width: 40px;
+        }
+        
+        #event-stats {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #888;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>AEDAT Stream Viewer</h1>
+    
+    <div id="upload-section">
+        <h2>Upload AEDAT4 File</h2>
+        <div class="upload-controls">
+            <!-- hidden native file input; label acts as styled button -->
+            <input type="file" id="file-input" accept=".aedat4" style="display:none">
+            <label for="file-input" class="choose-file-btn">Choose File...</label>
+
+            <select id="generate-mode" title="Choose generation mode">
+                <option style="color:#000000" value="all">Generate All Frames</option>
+                <option style="color:#000000" value="focus">Generate Time of Focus</option>
+            </select>
+
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button type="button" id="focus-decr" class="focus-step-btn">−</button>
+                <input type="number" id="focus-ms" min="10" step="10" value="100" title="Focus window half-width in ms">
+                <button type="button" id="focus-incr" class="focus-step-btn">+</button>
+            </div>
+
+            <button id="upload-btn">Upload & Parse</button>
+        </div>
+        <div id="status"></div>
+        <div id="metadata"></div>
+    </div>
+    
+    <div id="viewer-section">
+        <div id="streams-container">
+            <div class="stream-panel">
+                <h2>Events (Stream 0)</h2>
+                <canvas id="events-canvas" width="640" height="480"></canvas>
+                <div id="event-stats"></div>
+            </div>
+            
+            <div class="stream-panel">
+                <h2>RGB Frames (Stream 1)</h2>
+                <img id="rgb-frame" alt="RGB Frame">
+            </div>
+        </div>
+        
+        <div id="controls-section">
+            <div id="timeline-container">
+                <input type="range" id="timeline" min="0" max="100" value="0" step="0.1">
+                <div id="time-display">Time: 0 µs</div>
+            </div>
+            
+            <div id="playback-controls">
+                <button class="control-btn" id="play-btn">▶ Play</button>
+                <button class="control-btn" id="pause-btn" disabled>⏸ Pause</button>
+                <button class="control-btn" id="reset-btn">⏮ First</button>
+                <button class="control-btn" id="prev-btn">◀ Prev</button>
+                <button class="control-btn" id="next-btn">Next ▶</button>
+                <button class="control-btn" id="last-btn">Last ⏭</button>
+                
+                <div id="speed-control">
+                    <label>Speed:</label>
+                    <input type="range" id="speed-slider" min="0.1" max="5" step="0.1" value="1">
+                    <span id="speed-display">1.0x</span>
+                </div>
+                
+                <div id="speed-control">
+                    <label>Event Window:</label>
+                    <input type="range" id="event-window-slider" min="1" max="100" step="1" value="10">
+                    <span id="event-window-display">10ms</span>
+                </div>
+                
+                <div id="speed-control">
+                    <label>Frame:</label>
+                    <span id="frame-display">0 / 0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ========================================
+        // CONFIGURATION - Temporal Resolution Settings
+        // ========================================
+        const CONFIG = {
+            // Event window size in microseconds (default: 10ms = 10,000 µs)
+            // Smaller values = more frequent event updates, higher temporal resolution
+            // Larger values = smoother but less temporally precise event visualization
+            dt_events: 10000,
+            
+            // Playback speed multiplier (1.0 = real-time relative to timestamps)
+            playbackSpeed: 1.0,
+            
+            // RGB frame selection strategy: 'nearest' or 'threshold'
+            // 'nearest' = always show RGB frame closest to current time
+            // 'threshold' = only update RGB when crossing midpoint between frames
+            rgbStrategy: 'nearest',
+        };
+        
+        // ========================================
+        // State management
+        // ========================================
+        const state = {
+            metadata: null,
+            currentTime: 0,           // Global time (microseconds)
+            t_start: 0,               // Recording start time
+            t_end: 0,                 // Recording end time
+            
+            // RGB frame data
+            rgbFrames: [],            // Array of {timestamp, index}
+            currentRgbIndex: 0,       // Current RGB frame being displayed
+            lastRgbUpdateTime: 0,     // Last time RGB was updated (for threshold strategy)
+            
+            // Playback control
+            isPlaying: false,
+            lastAnimationTime: null,  // For computing time deltas
+            animationFrameId: null,
+        };
+        
+        // DOM elements
+        const fileInput = document.getElementById('file-input');
+        const uploadBtn = document.getElementById('upload-btn');
+        const statusDiv = document.getElementById('status');
+        const metadataDiv = document.getElementById('metadata');
+        const viewerSection = document.getElementById('viewer-section');
+        const eventsCanvas = document.getElementById('events-canvas');
+        const eventsCtx = eventsCanvas.getContext('2d');
+        const rgbFrame = document.getElementById('rgb-frame');
+        const timeline = document.getElementById('timeline');
+        const timeDisplay = document.getElementById('time-display');
+        const playBtn = document.getElementById('play-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const lastBtn = document.getElementById('last-btn');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedDisplay = document.getElementById('speed-display');
+        const eventWindowSlider = document.getElementById('event-window-slider');
+        const eventWindowDisplay = document.getElementById('event-window-display');
+        const frameDisplay = document.getElementById('frame-display');
+        const eventStats = document.getElementById('event-stats');
+        const generateModeSelect = document.getElementById('generate-mode');
+        const focusMsInput = document.getElementById('focus-ms');
+        const focusDecrBtn = document.getElementById('focus-decr');
+        const focusIncrBtn = document.getElementById('focus-incr');
+        const chooseFileBtn = document.querySelector('label[for="file-input"].choose-file-btn');
+        
+        // Upload file handler
+        uploadBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) {
+                statusDiv.textContent = 'Please select a file first';
+                statusDiv.style.color = '#f48771';
+                return;
+            }
+            
+            statusDiv.textContent = 'Uploading and parsing file...';
+            statusDiv.style.color = '#d4d4d4';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            // Append generation options
+            formData.append('generate_mode', generateModeSelect.value);
+            formData.append('focus_ms', focusMsInput.value);
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    state.metadata = result.metadata;
+                    statusDiv.textContent = 'File parsed successfully!';
+                    statusDiv.style.color = '#4ec9b0';
+                    
+                    // Set global time bounds
+                    state.t_start = result.metadata.start_time;
+                    state.t_end = result.metadata.end_time;
+                    state.currentTime = state.t_start;
+                    
+                    // Build RGB frame index for efficient lookup
+                    // Assumption: RGB frames are evenly distributed or have known timestamps
+                    state.rgbFrames = [];
+                    const rgbCount = result.metadata.rgb_frame_count;
+                    const duration = state.t_end - state.t_start;
+
+                    // Create frame index based on assumed uniform distribution
+                    // In production, you'd get actual timestamps from server
+                    if (rgbCount <= 0) {
+                        // no frames
+                    } else if (rgbCount === 1) {
+                        state.rgbFrames.push({ timestamp: state.t_start, index: 0 });
+                    } else {
+                        for (let i = 0; i < rgbCount; i++) {
+                            const timestamp = state.t_start + (duration * i / (rgbCount - 1));
+                            state.rgbFrames.push({ timestamp: Math.round(timestamp), index: i });
+                        }
+                    }
+                    
+                    // Display metadata
+                    metadataDiv.innerHTML = `
+                        <strong>Metadata:</strong><br>
+                        Duration: ${result.metadata.duration_ticks.toLocaleString()} µs (${(result.metadata.duration_ticks / 1000000).toFixed(2)}s)<br>
+                        Start Time: ${result.metadata.start_time.toLocaleString()} µs<br>
+                        End Time: ${result.metadata.end_time.toLocaleString()} µs<br>
+                        Resolution: ${result.metadata.width}x${result.metadata.height}<br>
+                        Event Windows: ${result.metadata.event_window_count}<br>
+                        RGB Frames: ${result.metadata.rgb_frame_count}<br>
+                        Total Events: ${result.metadata.total_events.toLocaleString()}<br>
+                        <br>
+                        <strong>Temporal Settings:</strong><br>
+                        Event Window: ${(CONFIG.dt_events / 1000).toFixed(1)} ms<br>
+                        Playback Speed: ${CONFIG.playbackSpeed.toFixed(1)}x
+                    `;
+                    
+                    // Setup canvas size
+                    eventsCanvas.width = result.metadata.width;
+                    eventsCanvas.height = result.metadata.height;
+                    
+                    // Setup timeline to represent global time
+                    timeline.min = state.t_start;
+                    timeline.max = state.t_end;
+                    timeline.value = state.t_start;
+                    timeline.step = CONFIG.dt_events; // Granular scrubbing
+                    
+                    // Show viewer
+                    viewerSection.style.display = 'block';
+                    
+                    // Update displays
+                    updateTimeDisplay();
+                    updateFrameDisplay();
+                    
+                    // Render first frame
+                    await renderAtTime(state.currentTime);
+                } else {
+                    statusDiv.textContent = 'Error: ' + (result.error || 'Unknown error');
+                    statusDiv.style.color = '#f48771';
+                }
+            } catch (error) {
+                statusDiv.textContent = 'Error: ' + error.message;
+                statusDiv.style.color = '#f48771';
+                console.error('Upload error:', error);
+            }
+        });
+        
+        // ========================================
+        // CORE RENDERING FUNCTIONS
+        // ========================================
+        
+        /**
+         * Get events in a temporal window centered around time t
+         * @param {number} t - Current global time (microseconds)
+         * @param {number} dt - Window size (microseconds)
+         * @returns {Promise<Array>} - Array of events in the window
+         */
+        async function getEventsInWindow(t, dt) {
+            const windowStart = t - dt / 2;
+            const windowEnd = t + dt / 2;
+            
+            try {
+                const response = await fetch(`/events_window?start_t=${Math.floor(windowStart)}&end_t=${Math.ceil(windowEnd)}`);
+                const data = await response.json();
+                return data.events || [];
+            } catch (error) {
+                console.error('Error fetching events:', error);
+                return [];
+            }
+        }
+
+        // Update choose-file label with selected filename
+        fileInput.addEventListener('change', () => {
+            if (!chooseFileBtn) return;
+            const f = fileInput.files && fileInput.files[0];
+            chooseFileBtn.textContent = f ? `File: ${f.name}` : 'Choose File...';
+        });
+
+        // Focus -- increment/decrement handlers for ms input
+        focusDecrBtn.addEventListener('click', () => {
+            let step = parseInt(focusMsInput.step) || 10;
+            let v = parseInt(focusMsInput.value) || 0;
+            v = Math.max(parseInt(focusMsInput.min) || 10, v - step);
+            focusMsInput.value = v;
+        });
+        focusIncrBtn.addEventListener('click', () => {
+            let step = parseInt(focusMsInput.step) || 10;
+            let v = parseInt(focusMsInput.value) || 0;
+            v = v + step;
+            focusMsInput.value = v;
+        });
+        
+        /**
+         * Get RGB frame index closest to given time
+         * Uses nearest-neighbor lookup on RGB frame timestamps
+         * @param {number} t - Current global time (microseconds)
+         * @returns {number} - Index of closest RGB frame
+         */
+        function getRgbFrameIndexForTime(t) {
+            if (!state.rgbFrames || state.rgbFrames.length === 0) return 0;
+            
+            // Binary search or linear scan for closest frame
+            let closestIndex = 0;
+            let minDiff = Math.abs(state.rgbFrames[0].timestamp - t);
+            
+            for (let i = 1; i < state.rgbFrames.length; i++) {
+                const diff = Math.abs(state.rgbFrames[i].timestamp - t);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIndex = i;
+                } else {
+                    // Timestamps are sorted, so we can stop early
+                    break;
+                }
+            }
+            
+            return closestIndex;
+        }
+        
+        /**
+         * Check if RGB frame should update based on strategy
+         * @param {number} t - Current global time
+         * @param {number} newIndex - New RGB frame index
+         * @returns {boolean} - True if RGB should update
+         */
+        function shouldUpdateRgb(t, newIndex) {
+            if (CONFIG.rgbStrategy === 'nearest') {
+                // Always update to nearest frame
+                return newIndex !== state.currentRgbIndex;
+            } else if (CONFIG.rgbStrategy === 'threshold') {
+                // Only update when crossing midpoint between frames
+                if (newIndex === state.currentRgbIndex) return false;
+                
+                const currentFrame = state.rgbFrames[state.currentRgbIndex];
+                const nextFrame = state.rgbFrames[newIndex];
+                
+                if (!currentFrame || !nextFrame) return true;
+                
+                const midpoint = (currentFrame.timestamp + nextFrame.timestamp) / 2;
+                
+                // Update if we've crossed the midpoint
+                if (newIndex > state.currentRgbIndex) {
+                    return t >= midpoint;
+                } else {
+                    return t < midpoint;
+                }
+            }
+            
+            return true;
+        }
+        
+        /**
+         * Main rendering function - renders both events and RGB at current time
+         * This is the central synchronization point
+         * @param {number} t - Global time (microseconds)
+         */
+        async function renderAtTime(t) {
+            if (!state.metadata) return;
+            
+            // Clamp time to valid range
+            t = Math.max(state.t_start, Math.min(state.t_end, t));
+            state.currentTime = t;
+            
+            // Update time display
+            updateTimeDisplay();
+            
+            // ========================================
+            // HIGH-FREQUENCY EVENT UPDATES
+            // Events are fetched and rendered with fine temporal resolution
+            // ========================================
+            const events = await getEventsInWindow(t, CONFIG.dt_events);
+            renderEvents(events);
+            eventStats.textContent = `Events in ${(CONFIG.dt_events / 1000).toFixed(1)}ms window: ${events.length}`;
+            
+            // ========================================
+            // COARSE RGB FRAME UPDATES
+            // RGB only updates when necessary based on frame timestamps
+            // ========================================
+            // If there are no RGB frames, display a null placeholder icon
+            if (!state.rgbFrames || state.rgbFrames.length === 0) {
+                rgbFrame.src = getNullRgbDataUri();
+                updateFrameDisplay();
+                return;
+            }
+
+            const newRgbIndex = getRgbFrameIndexForTime(t);
+
+            if (shouldUpdateRgb(t, newRgbIndex)) {
+                state.currentRgbIndex = newRgbIndex;
+                state.lastRgbUpdateTime = t;
+
+                // Fetch and display RGB frame
+                const rgbTimestamp = state.rgbFrames[newRgbIndex].timestamp;
+                rgbFrame.src = `/rgb_frame?t=${rgbTimestamp}&cache_bust=${Date.now()}`;
+
+                updateFrameDisplay();
+            }
+        }
+        
+        /**
+         * Update time display with current timestamp
+         */
+        function updateTimeDisplay() {
+            const relativeTime = state.currentTime - state.t_start;
+            const progress = ((state.currentTime - state.t_start) / (state.t_end - state.t_start) * 100).toFixed(1);
+            timeDisplay.textContent = `Time: ${state.currentTime.toLocaleString()} µs (${(relativeTime / 1000000).toFixed(3)}s) [${progress}%]`;
+        }
+        
+        /**
+         * Update frame counter display
+         */
+        function updateFrameDisplay() {
+            if (state.rgbFrames.length > 0) {
+                frameDisplay.textContent = `RGB Frame: ${state.currentRgbIndex + 1} / ${state.rgbFrames.length}`;
+            } else {
+                frameDisplay.textContent = `RGB Frame: 0 / 0`;
+            }
+        }
+
+        // Returns a data URI for a simple 'no image' SVG placeholder
+        function getNullRgbDataUri() {
+            const svg = `
+                <svg xmlns='http://www.w3.org/2000/svg' width='640' height='480' viewBox='0 0 640 480'>
+                    <rect width='100%' height='100%' fill='#0b0b0b'/>
+                    <g fill='#3c3c3c' transform='translate(160,120)'>
+                        <rect x='0' y='0' width='320' height='240' rx='12' ry='12' fill='#1a1a1a' stroke='#333' />
+                        <text x='160' y='125' fill='#666' font-size='20' font-family='Arial' text-anchor='middle' dominant-baseline='middle'>No RGB Frame</text>
+                    </g>
+                </svg>`;
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        }
+        
+        // Render events on canvas with brightness accumulation
+        function renderEvents(events) {
+            // Clear canvas
+            eventsCtx.fillStyle = '#000000';
+            eventsCtx.fillRect(0, 0, eventsCanvas.width, eventsCanvas.height);
+            
+            if (!events || events.length === 0) return;
+            
+            // Count events per pixel for brightness accumulation
+            const pixelCounts = new Map();
+            const onEvents = new Set();
+            const offEvents = new Set();
+            
+            for (const event of events) {
+                const key = `${event.x},${event.y}`;
+                pixelCounts.set(key, (pixelCounts.get(key) || 0) + 1);
+                
+                if (event.p) {
+                    onEvents.add(key);
+                } else {
+                    offEvents.add(key);
+                }
+            }
+            
+            // Render with logarithmic brightness
+            const imageData = eventsCtx.createImageData(eventsCanvas.width, eventsCanvas.height);
+            const data = imageData.data;
+            
+            for (const [key, count] of pixelCounts.entries()) {
+                const [x, y] = key.split(',').map(Number);
+                
+                if (x < 0 || x >= eventsCanvas.width || y < 0 || y >= eventsCanvas.height) {
+                    continue;
+                }
+                
+                // Logarithmic brightness scaling
+                const brightness = Math.min(255, Math.log1p(count) * (255 / Math.log(10)));
+                
+                const idx = (y * eventsCanvas.width + x) * 4;
+                
+                // Color: green for ON, blue for OFF
+                if (onEvents.has(key)) {
+                    data[idx] = 0;              // R
+                    data[idx + 1] = brightness; // G
+                    data[idx + 2] = 0;          // B
+                } else {
+                    data[idx] = 0;              // R
+                    data[idx + 1] = 0;          // G
+                    data[idx + 2] = brightness; // B
+                }
+                data[idx + 3] = 255; // A
+            }
+            
+            eventsCtx.putImageData(imageData, 0, 0);
+        }
+        
+        // ========================================
+        // NAVIGATION AND PLAYBACK CONTROLS
+        // ========================================
+        
+        // Timeline scrubbing - direct time control
+        timeline.addEventListener('input', async (e) => {
+            const t = parseInt(e.target.value);
+            await renderAtTime(t);
+        });
+        
+        // Navigation functions for discrete frame stepping
+        function goToTime(t) {
+            t = Math.max(state.t_start, Math.min(state.t_end, t));
+            state.currentTime = t;
+            timeline.value = t;
+            renderAtTime(t);
+        }
+        
+        function goToFirstFrame() {
+            goToTime(state.t_start);
+        }
+        
+        function goToPreviousFrame() {
+            // Step back by one event window
+            goToTime(state.currentTime - CONFIG.dt_events);
+        }
+        
+        function goToNextFrame() {
+            // Step forward by one event window
+            goToTime(state.currentTime + CONFIG.dt_events);
+        }
+        
+        function goToLastFrame() {
+            goToTime(state.t_end);
+        }
+        
+        // Button event listeners
+        resetBtn.addEventListener('click', goToFirstFrame);
+        prevBtn.addEventListener('click', goToPreviousFrame);
+        nextBtn.addEventListener('click', goToNextFrame);
+        lastBtn.addEventListener('click', goToLastFrame);
+        
+        // ========================================
+        // CONTINUOUS PLAYBACK LOOP
+        // This is where high-frequency event updates happen
+        // ========================================
+        
+        /**
+         * Animation loop for continuous playback
+         * Events update at high frequency, RGB updates less frequently
+         * @param {number} currentAnimationTime - High-resolution timestamp from requestAnimationFrame
+         */
+        function playbackLoop(currentAnimationTime) {
+            if (!state.isPlaying) return;
+            
+            // Calculate elapsed time since last frame
+            if (state.lastAnimationTime !== null) {
+                const realTimeDeltaMs = currentAnimationTime - state.lastAnimationTime;
+                
+                // Convert real-time delta to simulated time delta
+                // Apply playback speed multiplier
+                const simulatedDeltaUs = realTimeDeltaMs * 1000 * CONFIG.playbackSpeed;
+                
+                // Advance global time by high-resolution event step
+                state.currentTime += simulatedDeltaUs;
+                
+                // Loop at end
+                if (state.currentTime >= state.t_end) {
+                    state.currentTime = state.t_start;
+                }
+                
+                // Update timeline slider
+                timeline.value = state.currentTime;
+                
+                // Render at new time
+                // This will:
+                // 1. Fetch events in [t - dt_events/2, t + dt_events/2] and render them
+                // 2. Update RGB frame only if we've moved to a different frame's territory
+                renderAtTime(state.currentTime);
+            }
+            
+            state.lastAnimationTime = currentAnimationTime;
+            state.animationFrameId = requestAnimationFrame(playbackLoop);
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (!state.metadata) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    goToPreviousFrame();
+                    break;
+                case 'ArrowRight':
+                    goToNextFrame();
+                    break;
+                case 'Home':
+                    goToFirstFrame();
+                    break;
+                case 'End':
+                    goToLastFrame();
+                    break;
+                case ' ':
+                    // Spacebar toggles play/pause
+                    e.preventDefault();
+                    if (state.isPlaying) {
+                        pausePlayback();
+                    } else {
+                        startPlayback();
+                    }
+                    break;
+            }
+        });
+        
+        // ========================================
+        // PLAYBACK CONTROL FUNCTIONS
+        // ========================================
+        
+        function startPlayback() {
+            if (!state.metadata) return;
+            state.isPlaying = true;
+            state.lastAnimationTime = null;
+            playBtn.disabled = true;
+            pauseBtn.disabled = false;
+            state.animationFrameId = requestAnimationFrame(playbackLoop);
+        }
+        
+        function pausePlayback() {
+            state.isPlaying = false;
+            state.lastAnimationTime = null;
+            playBtn.disabled = false;
+            pauseBtn.disabled = true;
+            if (state.animationFrameId) {
+                cancelAnimationFrame(state.animationFrameId);
+                state.animationFrameId = null;
+            }
+        }
+        
+        // Attach playback controls
+        playBtn.addEventListener('click', startPlayback);
+        pauseBtn.addEventListener('click', pausePlayback);
+        
+        // ========================================
+        // CONFIGURATION CONTROLS
+        // Allow runtime adjustment of temporal resolution
+        // ========================================
+        
+        // Playback speed control
+        speedSlider.addEventListener('input', (e) => {
+            CONFIG.playbackSpeed = parseFloat(e.target.value);
+            speedDisplay.textContent = CONFIG.playbackSpeed.toFixed(1) + 'x';
+        });
+        
+        // Event window size control
+        // Updates the temporal resolution of event visualization
+        eventWindowSlider.addEventListener('input', (e) => {
+            const ms = parseInt(e.target.value);
+            CONFIG.dt_events = ms * 1000; // Convert ms to microseconds
+            eventWindowDisplay.textContent = ms + 'ms';
+            
+            // Update timeline step size
+            if (timeline) {
+                timeline.step = CONFIG.dt_events;
+            }
+            
+            // Re-render at current time with new window
+            if (state.metadata && !state.isPlaying) {
+                renderAtTime(state.currentTime);
+            }
+        });
+    </script>
+</body>
+</html>
