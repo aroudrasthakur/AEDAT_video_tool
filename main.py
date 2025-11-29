@@ -27,6 +27,10 @@ from PIL import Image
 import tempfile
 import os
 from typing import Dict, List, Optional
+from fastapi import BackgroundTasks, Form
+from fastapi.responses import FileResponse
+import imageio
+import math
 from pathlib import Path
 
 app = FastAPI(title="AEDAT Stream Viewer")
@@ -356,6 +360,143 @@ async def reset_cache():
         "temp_file": None,
     }
     return {"success": True}
+
+
+@app.post("/export_video")
+async def export_video(
+    background_tasks: BackgroundTasks,
+    fps: int = Form(15),
+    dt_events: int = Form(10000),
+    generate_mode: str = Form("all"),
+    focus_ms: int = Form(100),
+):
+    """Export a side-by-side MP4 (events | RGB) generated from cached data.
+
+    This endpoint requires a previously uploaded file (via `/upload`).
+    It will render frames on the server and return an MP4 file.
+    """
+    if cache["metadata"] is None:
+        raise HTTPException(status_code=400, detail="No file loaded")
+
+    width = int(cache["metadata"]["width"])
+    height = int(cache["metadata"]["height"])
+    start_t = int(cache["metadata"]["start_time"])
+    end_t = int(cache["metadata"]["end_time"])
+
+    # If focus mode requested, compute focus range similar to /upload behaviour
+    if generate_mode == 'focus' and cache['event_windows']:
+        max_window = max(cache['event_windows'], key=lambda w: len(w['events']))
+        center_t = (max_window['start_t'] + max_window['end_t']) // 2
+        focus_range_us = int(focus_ms) * 1000
+        focus_start = max(0, center_t - focus_range_us)
+        focus_end = center_t + focus_range_us
+        start_t = max(start_t, focus_start)
+        end_t = min(end_t, focus_end)
+
+    duration_s = max(0.001, (end_t - start_t) / 1e6)
+    total_frames = max(1, math.ceil(duration_s * fps))
+
+    # Prepare output file
+    out_tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+    out_tmp_path = out_tmp.name
+    out_tmp.close()
+
+    # Helper: collect events overlapping a time window
+    def events_in_range(s_t: int, e_t: int):
+        res = []
+        for w in cache['event_windows']:
+            if w['end_t'] >= s_t and w['start_t'] <= e_t:
+                for ev in w['events']:
+                    if s_t <= ev['t'] < e_t:
+                        res.append(ev)
+        return res
+
+    # Helper: get closest RGB frame image as numpy array (H,W,3)
+    from PIL import Image as PILImage
+    def get_rgb_for_time(t_val: int):
+        if not cache['rgb_frames']:
+            return None
+        # find closest
+        idx = min(range(len(cache['rgb_frames'])), key=lambda i: abs(cache['rgb_frames'][i]['timestamp'] - t_val))
+        data = cache['rgb_frames'][idx]['data']
+        try:
+            img = PILImage.open(BytesIO(data)).convert('RGB')
+            arr = np.array(img)
+            # resize if necessary
+            if arr.shape[1] != width or arr.shape[0] != height:
+                img = img.resize((width, height), PILImage.BILINEAR)
+                arr = np.array(img)
+            return arr
+        except Exception:
+            return None
+
+    # Writer using imageio (ffmpeg)
+    writer = imageio.get_writer(out_tmp_path, fps=fps, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv420p'])
+
+    try:
+        half_dt = dt_events // 2
+        for i in range(total_frames):
+            if total_frames == 1:
+                t = start_t
+            else:
+                t = int(start_t + (i / (total_frames - 1)) * (end_t - start_t))
+
+            s_t = t - half_dt
+            e_t = t + half_dt
+
+            events = events_in_range(s_t, e_t)
+
+            # Render events to image array
+            # Separate counts for ON/OFF
+            counts_on = np.zeros((height, width), dtype=np.float32)
+            counts_off = np.zeros((height, width), dtype=np.float32)
+            for ev in events:
+                x = int(ev['x']); y = int(ev['y'])
+                if 0 <= x < width and 0 <= y < height:
+                    if ev.get('p'):
+                        counts_on[y, x] += 1.0
+                    else:
+                        counts_off[y, x] += 1.0
+
+            # Brightness scaling (log)
+            def scale_counts(arr):
+                with np.errstate(divide='ignore'):
+                    scaled = np.log1p(arr) * (255.0 / np.log(10.0))
+                scaled = np.clip(scaled, 0, 255).astype(np.uint8)
+                return scaled
+
+            g_channel = scale_counts(counts_on)
+            b_channel = scale_counts(counts_off)
+            r_channel = np.zeros_like(g_channel, dtype=np.uint8)
+
+            event_img = np.stack([r_channel, g_channel, b_channel], axis=2)
+
+            # Get RGB frame for time
+            rgb_arr = get_rgb_for_time(t)
+            if rgb_arr is None:
+                # placeholder gray image
+                rgb_arr = np.full((height, width, 3), 11, dtype=np.uint8)
+                # draw text is omitted for server-side simplicity
+
+            # Concatenate side-by-side
+            combined = np.concatenate([event_img, rgb_arr], axis=1)
+
+            writer.append_data(combined)
+
+        writer.close()
+
+        # Schedule temp file removal after response
+        background_tasks.add_task(os.remove, out_tmp_path)
+        return FileResponse(out_tmp_path, media_type='video/mp4', filename='aedat_export.mp4', background=background_tasks)
+
+    except Exception as e:
+        try:
+            writer.close()
+        except Exception:
+            pass
+        if os.path.exists(out_tmp_path):
+            os.remove(out_tmp_path)
+        raise HTTPException(status_code=500, detail=f"Export failed: {e}")
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -466,6 +466,7 @@
                 <button class="control-btn" id="prev-btn">◀ Prev</button>
                 <button class="control-btn" id="next-btn">Next ▶</button>
                 <button class="control-btn" id="last-btn">Last ⏭</button>
+                <button class="control-btn" id="save-video-btn">💾 Save Video</button>
                 
                 <div id="speed-control">
                     <label>Speed:</label>
@@ -1038,6 +1039,61 @@
         // Attach playback controls
         playBtn.addEventListener('click', startPlayback);
         pauseBtn.addEventListener('click', pausePlayback);
+
+        // ========================================
+        // VIDEO EXPORT (Side-by-side)
+        // Combines the events canvas (left) and RGB frame (right)
+        // into a single canvas, records it via MediaRecorder,
+        // and downloads a WebM file.
+        // ========================================
+
+        const saveVideoBtn = document.getElementById('save-video-btn');
+        if (saveVideoBtn) {
+            saveVideoBtn.addEventListener('click', async () => {
+                if (!state.metadata) {
+                    statusDiv.textContent = 'No file loaded to export';
+                    statusDiv.style.color = '#f48771';
+                    return;
+                }
+
+                saveVideoBtn.disabled = true;
+                statusDiv.textContent = 'Requesting server to export MP4...';
+                statusDiv.style.color = '#d4d4d4';
+
+                const form = new FormData();
+                form.append('fps', '15');
+                form.append('dt_events', String(CONFIG.dt_events));
+                form.append('generate_mode', generateModeSelect.value);
+                form.append('focus_ms', focusMsInput.value);
+
+                try {
+                    const resp = await fetch('/export_video', { method: 'POST', body: form });
+                    if (!resp.ok) {
+                        const msg = await resp.text();
+                        throw new Error(msg || resp.statusText);
+                    }
+
+                    const blob = await resp.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'aedat_export.mp4';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+
+                    statusDiv.textContent = 'Video downloaded: aedat_export.mp4';
+                    statusDiv.style.color = '#4ec9b0';
+                } catch (err) {
+                    console.error('Export error:', err);
+                    statusDiv.textContent = 'Export failed: ' + (err.message || err);
+                    statusDiv.style.color = '#f48771';
+                } finally {
+                    saveVideoBtn.disabled = false;
+                }
+            });
+        }
         
         // ========================================
         // CONFIGURATION CONTROLS
