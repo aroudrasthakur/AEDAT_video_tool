@@ -16,20 +16,20 @@ Run:
 Then open: http://localhost:8000
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
-from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-import aedat
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form # type: ignore
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse # type: ignore
+from fastapi.staticfiles import StaticFiles # type: ignore
+from fastapi.middleware.cors import CORSMiddleware # type: ignore
+import aedat # type: ignore
 import numpy as np
 from io import BytesIO
 from PIL import Image
 import tempfile
 import os
 from typing import Dict, List, Optional
-from fastapi import BackgroundTasks, Form
-from fastapi.responses import FileResponse
-import imageio
+from fastapi import BackgroundTasks, Form # type: ignore
+from fastapi.responses import FileResponse # type: ignore
+import imageio # type: ignore
 import math
 from pathlib import Path
 
@@ -97,15 +97,7 @@ async def upload_file(
     generate_mode: str = Form("all"),  # 'all' or 'focus'
     focus_ms: int = Form(100)           # when generate_mode=='focus', window half-width in ms
 ):
-    """
-    Upload and parse AEDAT4 file.
-    
-    Extracts:
-    - Stream 0: Event data (x, y, polarity, timestamp)
-    - Stream 1: RGB frames with timestamps
-    
-    Returns metadata about the parsed file.
-    """
+
     global cache
     
     # Clear previous cache
@@ -518,5 +510,5 @@ async def serve_index():
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn # type: ignore
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
